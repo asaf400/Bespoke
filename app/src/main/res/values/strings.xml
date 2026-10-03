@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">HandsFreeControls</string>
+    <string name="accessibility_service_label">Hands Free Controls</string>
+    <string name="accessibility_service_description">Intercepts Bluetooth hands-free button clicks to control media.</string>
+    <string name="enable_accessibility">Enable Accessibility Service</string>
+    <string name="event_log_title">Captured Events:</string>
+</resources>
