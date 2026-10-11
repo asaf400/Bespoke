@@ -2,7 +2,7 @@
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeViewClicked"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagDefault|flagRequestFilterKeyEvents"
+    android:accessibilityFlags="flagDefault"
     android:canRequestFilterKeyEvents="true"
     android:description="@string/accessibility_service_description"
     android:isAccessibilityTool="false"

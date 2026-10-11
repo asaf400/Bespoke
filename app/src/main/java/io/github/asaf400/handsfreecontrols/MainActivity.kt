@@ -11,12 +11,12 @@ import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityManager
+import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.Spinner
 import android.widget.TextView
+import com.google.android.material.switchmaterial.SwitchMaterial
 import androidx.appcompat.app.AppCompatActivity
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
@@ -35,7 +35,23 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         tvLog = findViewById(R.id.tv_event_log)
+        tvLog.text = BluetoothButtonService.getStoredLog(this)
         val btnEnable = findViewById<Button>(R.id.btn_enable_accessibility)
+
+        val keyCaptureSwitch = findViewById<SwitchMaterial>(R.id.switch_key_capture)
+        keyCaptureSwitch.isChecked = KeyCapture.isEnabled(this)
+        keyCaptureSwitch.setOnCheckedChangeListener { _, isChecked ->
+            KeyCapture.setEnabled(this, isChecked)
+        }
+
+        setupActionSpinner(R.id.spinner_single, pressCount = 1)
+        setupActionSpinner(R.id.spinner_double, pressCount = 2)
+        setupActionSpinner(R.id.spinner_triple, pressCount = 3)
+
+        findViewById<Button>(R.id.btn_clear_log).setOnClickListener {
+            EventLog.clear(this)
+            tvLog.text = ""
+        }
 
         btnEnable.setOnClickListener {
             val component = ComponentName(this, BluetoothButtonService::class.java)
@@ -51,12 +67,40 @@ class MainActivity : AppCompatActivity() {
 
         val filter = IntentFilter(BluetoothButtonService.ACTION_LOG_EVENT)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(logReceiver, filter, Context.RECEIVER_EXPORTED)
+            registerReceiver(logReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
         } else {
             registerReceiver(logReceiver, filter)
         }
 
         logAccessibilityServiceState()
+    }
+
+    private fun setupActionSpinner(spinnerId: Int, pressCount: Int) {
+        val spinner = findViewById<Spinner>(spinnerId)
+        val labels = MediaActions.all.map { getString(it.labelRes) }
+        spinner.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_item,
+            labels
+        ).also { adapter ->
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+        val selected = MediaActions.all.indexOfFirst {
+            it.keyCode == ActionMapping.keyCodeFor(this, pressCount)
+        }.coerceAtLeast(0)
+        spinner.setSelection(selected)
+        spinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: android.widget.AdapterView<*>?,
+                view: android.view.View?,
+                position: Int,
+                id: Long
+            ) {
+                ActionMapping.set(this@MainActivity, pressCount, MediaActions.all[position].keyCode)
+            }
+
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+        }
     }
 
     private fun logAccessibilityServiceState() {
@@ -107,9 +151,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun appendLog(message: String) {
-        val timestamp = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()).format(Date())
         val currentText = tvLog.text.toString()
-        val newLog = "[$timestamp] $message\n$currentText"
+        val newLog = "$message\n$currentText"
         tvLog.text = newLog
     }
 }

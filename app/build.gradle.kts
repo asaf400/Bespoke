@@ -35,7 +35,23 @@ android {
     }
 }
 
+val compileXposedStubs = tasks.register<JavaCompile>("compileXposedStubs") {
+    source = fileTree("xposed-stubs") { include("**/*.java") }
+    classpath = files()
+    destinationDirectory.set(layout.buildDirectory.dir("xposed-stubs"))
+    sourceCompatibility = JavaVersion.VERSION_11.toString()
+    targetCompatibility = JavaVersion.VERSION_11.toString()
+}
+
+val xposedStubsJar = tasks.register<Jar>("xposedStubsJar") {
+    dependsOn(compileXposedStubs)
+    from(compileXposedStubs.flatMap { it.destinationDirectory })
+    archiveFileName.set("xposed-stubs.jar")
+    destinationDirectory.set(layout.buildDirectory.dir("xposed-libs"))
+}
+
 dependencies {
+    compileOnly(files(xposedStubsJar))
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.core.ktx)
     implementation(libs.material)

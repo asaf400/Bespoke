@@ -3,5 +3,25 @@
     <string name="accessibility_service_label">Hands Free Controls</string>
     <string name="accessibility_service_description">Intercepts Bluetooth hands-free button clicks to control media.</string>
     <string name="enable_accessibility">Enable Accessibility Service</string>
+    <string name="capture_phone_keys">Also log phone buttons</string>
+    <string name="mapping_single">Single press</string>
+    <string name="mapping_double">Double press</string>
+    <string name="mapping_triple">Triple press</string>
+    <string name="action_none">None</string>
+    <string name="action_play_pause">Play/Pause</string>
+    <string name="action_play">Play</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_stop">Stop</string>
+    <string name="action_next">Next</string>
+    <string name="action_previous">Previous</string>
+    <string name="action_rewind">Rewind</string>
+    <string name="action_fast_forward">Fast forward</string>
+    <string name="action_skip_backward">Skip backward</string>
+    <string name="action_skip_forward">Skip forward</string>
+    <string name="action_step_backward">Step backward</string>
+    <string name="action_step_forward">Step forward</string>
+    <string name="action_record">Record</string>
+    <string name="action_audio_track">Audio track</string>
     <string name="event_log_title">Captured Events:</string>
+    <string name="clear_log">Clear log</string>
 </resources>

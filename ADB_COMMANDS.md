@@ -67,6 +67,26 @@ Put back the list without our entry, for example:
 & $adb shell settings put secure enabled_accessibility_services com.x8bit.bitwarden/.Accessibility.AccessibilityService
 ```
 
+## Vector module for the car hands-free button
+
+The steering-wheel button is not a key event. Vector hooks `HeadsetService.SynchronousStartVoiceRecognitionByHeadset` inside `com.android.bluetooth`. The CLI has to run as root, and `daemon.apk` must be copied somewhere `app_process` can read:
+
+```powershell
+$adb = "K:\Android SDK\Sdk\platform-tools\adb.exe"
+& $adb shell su -c "cp /data/adb/modules/zygisk_vector/daemon.apk /data/local/tmp/daemon.apk"
+$cli = "/system/bin/app_process -Djava.class.path=/data/local/tmp/daemon.apk /system/bin --nice-name=VectorCli org.matrix.vector.daemon.Cli"
+
+& $adb shell su -c "$cli modules ls"
+& $adb shell su -c "$cli modules enable io.github.asaf400.handsfreecontrols"
+& $adb shell su -c "$cli scope set io.github.asaf400.handsfreecontrols com.android.bluetooth/0"
+& $adb shell su -c "$cli scope ls io.github.asaf400.handsfreecontrols"
+
+# The hook loads the next time the Bluetooth process starts.
+& $adb shell su -c 'kill $(pidof com.android.bluetooth)'
+```
+
+Look for `HandsFreeControls: hooked` in logcat after Bluetooth restarts. A steering-wheel press should then appear in the app as `Car hands-free`.
+
 ## Verify
 
 ```powershell
