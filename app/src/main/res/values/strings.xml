@@ -8,6 +8,8 @@
     <string name="mapping_single">Single press</string>
     <string name="mapping_double">Double press</string>
     <string name="mapping_triple">Triple press</string>
+    <string name="press_window_label">Wait for next press: %1$d ms</string>
+    <string name="debounce_label">Ignore repeat signal: %1$d ms</string>
     <string name="action_none">None</string>
     <string name="action_play_pause">Play/Pause</string>
     <string name="action_play">Play</string>

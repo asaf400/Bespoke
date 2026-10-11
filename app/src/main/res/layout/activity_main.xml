@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="match_parent">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="16dp">
 
@@ -60,6 +64,36 @@
         android:layout_height="wrap_content"
         android:spinnerMode="dropdown" />
 
+    <TextView
+        android:id="@+id/label_press_window"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/press_window_label" />
+
+    <SeekBar
+        android:id="@+id/seek_press_window"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="280"
+        android:min="0"
+        android:progress="80" />
+
+    <TextView
+        android:id="@+id/label_debounce"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/debounce_label" />
+
+    <SeekBar
+        android:id="@+id/seek_debounce"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="160"
+        android:min="0"
+        android:progress="50" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -81,16 +115,11 @@
             android:text="@string/clear_log" />
     </LinearLayout>
 
-    <ScrollView
+    <TextView
+        android:id="@+id/tv_event_log"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
-
-        <TextView
-            android:id="@+id/tv_event_log"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:fontFamily="monospace" />
-    </ScrollView>
+        android:layout_height="wrap_content"
+        android:fontFamily="monospace" />
 
 </LinearLayout>
+</ScrollView>

@@ -8,9 +8,6 @@ import android.os.SystemClock
 import android.view.KeyEvent
 
 object HandsFreePresses {
-    private const val CLICK_TIMEOUT_MS = 500L
-    private const val DEBOUNCE_MS = 250L
-
     private val handler = Handler(Looper.getMainLooper())
     private var clickCount = 0
     private var lastPressElapsed = 0L
@@ -28,12 +25,12 @@ object HandsFreePresses {
         handler.post {
             appContext = application
             val now = SystemClock.elapsedRealtime()
-            if (now - lastPressElapsed < DEBOUNCE_MS) return@post
+            if (now - lastPressElapsed < PressTiming.debounceMs(application)) return@post
             lastPressElapsed = now
             clickCount++
             EventLog.append(application, "$source press: $clickCount")
             handler.removeCallbacks(finishRunnable)
-            handler.postDelayed(finishRunnable, CLICK_TIMEOUT_MS)
+            handler.postDelayed(finishRunnable, PressTiming.windowMs(application))
         }
     }
 

@@ -13,6 +13,7 @@ import android.util.Log
 import android.view.accessibility.AccessibilityManager
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.SeekBar
 import android.widget.Spinner
 import android.widget.TextView
 import com.google.android.material.switchmaterial.SwitchMaterial
@@ -53,6 +54,24 @@ class MainActivity : AppCompatActivity() {
         setupActionSpinner(R.id.spinner_single, pressCount = 1)
         setupActionSpinner(R.id.spinner_double, pressCount = 2)
         setupActionSpinner(R.id.spinner_triple, pressCount = 3)
+        setupTimingSeekBar(
+            R.id.seek_press_window,
+            R.id.label_press_window,
+            R.string.press_window_label,
+            PressTiming.MIN_WINDOW_MS,
+            PressTiming.MAX_WINDOW_MS,
+            PressTiming.windowMs(this).toInt(),
+            PressTiming::setWindowMs
+        )
+        setupTimingSeekBar(
+            R.id.seek_debounce,
+            R.id.label_debounce,
+            R.string.debounce_label,
+            PressTiming.MIN_DEBOUNCE_MS,
+            PressTiming.MAX_DEBOUNCE_MS,
+            PressTiming.debounceMs(this).toInt(),
+            PressTiming::setDebounceMs
+        )
 
         findViewById<Button>(R.id.btn_clear_log).setOnClickListener {
             EventLog.clear(this)
@@ -79,6 +98,38 @@ class MainActivity : AppCompatActivity() {
         }
 
         logAccessibilityServiceState()
+    }
+
+    private fun setupTimingSeekBar(
+        seekBarId: Int,
+        labelId: Int,
+        labelRes: Int,
+        minimumMs: Int,
+        maximumMs: Int,
+        valueMs: Int,
+        save: (Context, Int) -> Unit
+    ) {
+        val label = findViewById<TextView>(labelId)
+        val seekBar = findViewById<SeekBar>(seekBarId)
+        val stepCount = (maximumMs - minimumMs) / PressTiming.STEP_MS
+        fun milliseconds(step: Int) = minimumMs + step * PressTiming.STEP_MS
+
+        seekBar.min = 0
+        seekBar.max = stepCount
+        val snappedStep = ((valueMs - minimumMs) / PressTiming.STEP_MS).coerceIn(0, stepCount)
+        label.text = getString(labelRes, milliseconds(snappedStep))
+        seekBar.progress = snappedStep
+        seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+                val milliseconds = milliseconds(progress)
+                label.text = getString(labelRes, milliseconds)
+                if (fromUser) save(this@MainActivity, milliseconds)
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar) = Unit
+
+            override fun onStopTrackingTouch(seekBar: SeekBar) = Unit
+        })
     }
 
     private fun setupActionSpinner(spinnerId: Int, pressCount: Int) {
