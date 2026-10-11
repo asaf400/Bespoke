@@ -30,8 +30,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }
 
@@ -39,8 +39,8 @@ val compileXposedStubs = tasks.register<JavaCompile>("compileXposedStubs") {
     source = fileTree("xposed-stubs") { include("**/*.java") }
     classpath = files()
     destinationDirectory.set(layout.buildDirectory.dir("xposed-stubs"))
-    sourceCompatibility = JavaVersion.VERSION_11.toString()
-    targetCompatibility = JavaVersion.VERSION_11.toString()
+    sourceCompatibility = JavaVersion.VERSION_17.toString()
+    targetCompatibility = JavaVersion.VERSION_17.toString()
 }
 
 val xposedStubsJar = tasks.register<Jar>("xposedStubsJar") {
