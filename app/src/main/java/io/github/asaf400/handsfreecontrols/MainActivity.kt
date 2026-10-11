@@ -10,7 +10,10 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
+import android.view.View
 import android.view.accessibility.AccessibilityManager
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.SeekBar
@@ -34,6 +37,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        applySystemBarPadding()
 
         tvLog = findViewById(R.id.tv_event_log)
         tvLog.text = BluetoothButtonService.getStoredLog(this)
@@ -98,6 +102,18 @@ class MainActivity : AppCompatActivity() {
         }
 
         logAccessibilityServiceState()
+    }
+
+    private fun applySystemBarPadding() {
+        val root = findViewById<View>(R.id.root)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, windowInsets ->
+            val bars = windowInsets.getInsets(
+                WindowInsetsCompat.Type.navigationBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            windowInsets
+        }
+        ViewCompat.requestApplyInsets(root)
     }
 
     private fun setupTimingSeekBar(
