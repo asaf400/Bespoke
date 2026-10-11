@@ -13,6 +13,8 @@ public abstract class XC_MethodHook {
         public Member method;
         public Object thisObject;
         public Object[] args;
+
+        public void setResult(Object result) {}
     }
 
     public static final class Unhook {}

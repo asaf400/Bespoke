@@ -44,6 +44,12 @@ class MainActivity : AppCompatActivity() {
             KeyCapture.setEnabled(this, isChecked)
         }
 
+        val passToAndroid = findViewById<SwitchMaterial>(R.id.switch_pass_to_android)
+        passToAndroid.isChecked = AssistantRelay.passesToAndroid(this)
+        passToAndroid.setOnCheckedChangeListener { _, isChecked ->
+            AssistantRelay.setPassesToAndroid(this, isChecked)
+        }
+
         setupActionSpinner(R.id.spinner_single, pressCount = 1)
         setupActionSpinner(R.id.spinner_double, pressCount = 2)
         setupActionSpinner(R.id.spinner_triple, pressCount = 3)

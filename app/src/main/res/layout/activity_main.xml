@@ -18,6 +18,12 @@
         android:layout_marginTop="8dp"
         android:text="@string/capture_phone_keys" />
 
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/switch_pass_to_android"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/pass_to_android" />
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

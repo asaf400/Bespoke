@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.XSharedPreferences
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
@@ -29,9 +30,40 @@ class CarButtonHook : IXposedHookLoadPackage {
                     }
                 }
             )
-            XposedBridge.log("$TAG hooked ${hooked.size} headset voice methods")
+            val assistantHooked = hookAssistantLaunch(lpparam.classLoader)
+            XposedBridge.log(
+                "$TAG hooked ${hooked.size} headset voice methods, assistant gate=$assistantHooked"
+            )
         } catch (t: Throwable) {
             XposedBridge.log("$TAG hook failed: $t")
+        }
+    }
+
+    private fun hookAssistantLaunch(classLoader: ClassLoader): Int {
+        val systemInterface = XposedHelpers.findClassIfExists(HEADSET_SYSTEM_INTERFACE, classLoader)
+            ?: return 0
+        val hooked = XposedBridge.hookAllMethods(
+            systemInterface,
+            "activateVoiceRecognition",
+            object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    if (passesToAndroid()) return
+                    XposedBridge.log("$TAG blocked assistant launch")
+                    param.setResult(true)
+                }
+            }
+        )
+        return hooked.size
+    }
+
+    private fun passesToAndroid(): Boolean {
+        return try {
+            val preferences = XSharedPreferences(APP_PACKAGE, AssistantRelay.PREFERENCES)
+            preferences.reload()
+            preferences.getBoolean(AssistantRelay.PASS_TO_ANDROID, true)
+        } catch (t: Throwable) {
+            XposedBridge.log("$TAG could not read assistant toggle: $t")
+            true
         }
     }
 
@@ -61,6 +93,7 @@ class CarButtonHook : IXposedHookLoadPackage {
         private const val TAG = "HandsFreeControls"
         private const val BLUETOOTH_PACKAGE = "com.android.bluetooth"
         private const val HEADSET_SERVICE = "com.android.bluetooth.hfp.HeadsetService"
+        private const val HEADSET_SYSTEM_INTERFACE = "com.android.bluetooth.hfp.HeadsetSystemInterface"
         private const val APP_PACKAGE = "io.github.asaf400.handsfreecontrols"
         private const val FLAG_INCLUDE_STOPPED_PACKAGES = 0x00000020
     }
