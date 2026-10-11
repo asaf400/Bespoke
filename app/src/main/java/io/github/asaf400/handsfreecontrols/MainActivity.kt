@@ -108,7 +108,7 @@ class MainActivity : AppCompatActivity() {
         val root = findViewById<View>(R.id.root)
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, windowInsets ->
             val bars = windowInsets.getInsets(
-                WindowInsetsCompat.Type.navigationBars() or WindowInsetsCompat.Type.displayCutout()
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
             )
             view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
             windowInsets
