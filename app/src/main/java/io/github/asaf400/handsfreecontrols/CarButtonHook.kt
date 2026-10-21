@@ -31,9 +31,10 @@ class CarButtonHook : IXposedHookLoadPackage {
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         headsetService = param.thisObject
-                        val device = param.args?.getOrNull(0)?.toString() ?: "unknown"
-                        XposedBridge.log("$TAG car hands-free from $device, pass=${passesToAndroid()}")
-                        notifyApp(device)
+                        val (address, name) = deviceIdentity(param.args?.getOrNull(0))
+                        pendingAddress = address
+                        XposedBridge.log("$TAG car hands-free from $address, pass=${passesToAndroid(address)}")
+                        notifyApp(address, name)
                     }
                 }
             )
@@ -58,7 +59,7 @@ class CarButtonHook : IXposedHookLoadPackage {
             "activateVoiceRecognition",
             object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
-                    if (passesToAndroid()) {
+                    if (passesToAndroid(pendingAddress)) {
                         XposedBridge.log("$TAG allowing assistant launch")
                         return
                     }
@@ -92,7 +93,7 @@ class CarButtonHook : IXposedHookLoadPackage {
                     val intent = param.args?.firstOrNull { it is Intent } as? Intent ?: return
                     val action = intent.action ?: return
                     if (action != Intent.ACTION_VOICE_COMMAND && action != Intent.ACTION_ASSIST) return
-                    if (passesToAndroid()) return
+                    if (passesToAndroid(pendingAddress)) return
                     XposedBridge.log("$TAG blocked startActivity $action")
                     param.setResult(null)
                 }
@@ -118,22 +119,23 @@ class CarButtonHook : IXposedHookLoadPackage {
             val context = applicationContext() ?: return@post
             context.registerReceiver(
                 passReceiver,
-                IntentFilter(AssistantRelay.ACTION_CHANGED),
+                IntentFilter(DeviceProfiles.ACTION_CHANGED),
                 Context.RECEIVER_EXPORTED
             )
             receiverRegistered = true
-            XposedBridge.log("$TAG listening for assistant toggle, pass=$passToAndroid")
+            XposedBridge.log("$TAG listening for assistant toggle")
         }
     }
 
     private val passReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (!intent.hasExtra(AssistantRelay.PASS_TO_ANDROID)) return
-            val pass = intent.getBooleanExtra(AssistantRelay.PASS_TO_ANDROID, true)
-            passToAndroid = pass
+            val address = intent.getStringExtra(DeviceProfiles.EXTRA_ADDRESS)?.trim()?.uppercase()
+            if (address.isNullOrEmpty() || !intent.hasExtra(DeviceProfiles.PASS_TO_ANDROID)) return
+            val pass = intent.getBooleanExtra(DeviceProfiles.PASS_TO_ANDROID, true)
+            passOverrides[address] = pass
             refreshPreferences()
-            XposedBridge.log("$TAG assistant toggle is now pass=$passToAndroid, readable=$prefsReadable")
-            if (passToAndroid == false) stopActiveVoiceRecognition()
+            XposedBridge.log("$TAG assistant toggle for $address is now pass=$pass, readable=$prefsReadable")
+            if (!pass) stopActiveVoiceRecognition()
             reportStatus()
         }
     }
@@ -156,13 +158,11 @@ class CarButtonHook : IXposedHookLoadPackage {
             prefsReadable = file?.canRead() == true
             if (!prefsReadable) return
             preferences.reload()
-            passToAndroid = preferences.getBoolean(AssistantRelay.PASS_TO_ANDROID, true)
             if (preferenceListener != null) return
             val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
                 preferences.reload()
-                passToAndroid = preferences.getBoolean(AssistantRelay.PASS_TO_ANDROID, true)
-                XposedBridge.log("$TAG preference file changed, pass=$passToAndroid")
-                if (passToAndroid == false) stopActiveVoiceRecognition()
+                passOverrides.clear()
+                XposedBridge.log("$TAG preference file changed")
                 reportStatus()
             }
             preferenceListener = listener
@@ -181,9 +181,9 @@ class CarButtonHook : IXposedHookLoadPackage {
         Handler(Looper.getMainLooper()).post {
             if (sharedPreferences != null) return@post
             try {
-                sharedPreferences = XSharedPreferences(APP_PACKAGE, AssistantRelay.PREFERENCES)
+                sharedPreferences = XSharedPreferences(APP_PACKAGE, DeviceProfiles.PREFERENCES)
                 refreshPreferences()
-                XposedBridge.log("$TAG preferences readable=$prefsReadable, pass=$passToAndroid")
+                XposedBridge.log("$TAG preferences readable=$prefsReadable")
             } catch (t: Throwable) {
                 XposedBridge.log("$TAG could not watch assistant preferences: $t")
                 prefsReadable = false
@@ -192,17 +192,39 @@ class CarButtonHook : IXposedHookLoadPackage {
         }
     }
 
-    private fun passesToAndroid(): Boolean {
-        passToAndroid?.let { return it }
-        val preferences = sharedPreferences ?: return true
+    private fun passesToAndroid(address: String?): Boolean {
+        val normalized = address?.trim()?.uppercase().orEmpty()
+        if (normalized.isEmpty()) return true
+        passOverrides[normalized]?.let { return it }
+        val defaultPass = !normalized.equals(DeviceProfiles.SEEDED_ADDRESS, ignoreCase = true)
+        val preferences = sharedPreferences ?: return defaultPass
         return try {
             preferences.reload()
-            val pass = preferences.getBoolean(AssistantRelay.PASS_TO_ANDROID, true)
-            passToAndroid = pass
-            pass
+            preferences.getBoolean(DeviceProfiles.passKey(normalized), defaultPass)
         } catch (t: Throwable) {
             XposedBridge.log("$TAG could not read assistant toggle: $t")
-            true
+            defaultPass
+        }
+    }
+
+    private fun deviceIdentity(device: Any?): Pair<String, String> {
+        if (device == null) return "" to ""
+        return try {
+            val address = (XposedHelpers.callMethod(device, "getAddress") as? String)
+                ?.trim()
+                ?.uppercase()
+                .orEmpty()
+            val alias = try {
+                XposedHelpers.callMethod(device, "getAlias") as? String
+            } catch (_: Throwable) {
+                null
+            }
+            val name = alias?.takeIf { it.isNotBlank() }
+                ?: (XposedHelpers.callMethod(device, "getName") as? String).orEmpty()
+            address to name
+        } catch (t: Throwable) {
+            XposedBridge.log("$TAG could not read device identity: $t")
+            "" to ""
         }
     }
 
@@ -231,7 +253,7 @@ class CarButtonHook : IXposedHookLoadPackage {
         }
     }
 
-    private fun notifyApp(device: String) {
+    private fun notifyApp(address: String, name: String) {
         try {
             val context = applicationContext() ?: return
             context.sendBroadcast(
@@ -239,7 +261,8 @@ class CarButtonHook : IXposedHookLoadPackage {
                     .setComponent(
                         ComponentName(APP_PACKAGE, "$APP_PACKAGE.CarButtonReceiver")
                     )
-                    .putExtra(CarButtonReceiver.EXTRA_DEVICE, device)
+                    .putExtra(CarButtonReceiver.EXTRA_ADDRESS, address)
+                    .putExtra(CarButtonReceiver.EXTRA_NAME, name)
                     .addFlags(FLAG_INCLUDE_STOPPED_PACKAGES)
             )
         } catch (t: Throwable) {
@@ -248,7 +271,7 @@ class CarButtonHook : IXposedHookLoadPackage {
     }
 
     companion object {
-        private const val TAG = "HandsFreeControls"
+        private const val TAG = "Bespoke"
         private const val BLUETOOTH_PACKAGE = "com.android.bluetooth"
         private const val HEADSET_SERVICE = "com.android.bluetooth.hfp.HeadsetService"
         private const val HEADSET_SYSTEM_INTERFACE = "com.android.bluetooth.hfp.HeadsetSystemInterface"
@@ -256,13 +279,15 @@ class CarButtonHook : IXposedHookLoadPackage {
         private const val FLAG_INCLUDE_STOPPED_PACKAGES = 0x00000020
 
         @Volatile
-        private var passToAndroid: Boolean? = null
+        private var pendingAddress: String? = null
 
         @Volatile
         private var prefsReadable = false
 
         @Volatile
         private var headsetService: Any? = null
+
+        private val passOverrides = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
 
         private var sharedPreferences: XSharedPreferences? = null
         private var preferenceListener: SharedPreferences.OnSharedPreferenceChangeListener? = null

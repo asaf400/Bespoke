@@ -6,12 +6,13 @@ import android.content.Intent
 
 class CarButtonReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        val device = intent.getStringExtra(EXTRA_DEVICE).orEmpty()
-        val source = if (device.isEmpty()) "Car hands-free" else "Car hands-free ($device)"
-        HandsFreePresses.press(context, source)
+        val address = intent.getStringExtra(EXTRA_ADDRESS).orEmpty()
+        val name = intent.getStringExtra(EXTRA_NAME).orEmpty()
+        HandsFreePresses.press(context, address, name)
     }
 
     companion object {
-        const val EXTRA_DEVICE = "device"
+        const val EXTRA_ADDRESS = "address"
+        const val EXTRA_NAME = "name"
     }
 }

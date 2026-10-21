@@ -1,12 +1,10 @@
 <resources>
-    <string name="app_name">HandsFreeControls</string>
-    <string name="accessibility_service_label">Hands Free Controls</string>
-    <string name="accessibility_service_description">Intercepts Bluetooth hands-free button clicks to control media.</string>
-    <string name="enable_accessibility">Enable Accessibility Service</string>
+    <string name="app_name">Bespoke</string>
     <string name="xposed_status_waiting">Vector hook: not detected</string>
     <string name="xposed_status_active">Vector hook: active, preferences readable</string>
     <string name="xposed_status_unreadable">Vector hook: active, preferences not readable</string>
-    <string name="capture_phone_keys">Also log phone buttons</string>
+    <string name="device_label">Device</string>
+    <string name="profile_name_label">Profile name</string>
     <string name="pass_to_android">Pass press to Android assistant</string>
     <string name="mapping_single">Single press</string>
     <string name="mapping_double">Double press</string>
@@ -28,6 +26,7 @@
     <string name="action_step_forward">Step forward</string>
     <string name="action_record">Record</string>
     <string name="action_audio_track">Audio track</string>
+    <string name="show_event_log">Show captured events</string>
     <string name="event_log_title">Captured Events:</string>
     <string name="clear_log">Clear log</string>
 </resources>

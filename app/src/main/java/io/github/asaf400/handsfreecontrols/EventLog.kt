@@ -15,7 +15,7 @@ object EventLog {
     private const val MAX_CHARACTERS = 50_000
 
     fun append(context: Context, message: String) {
-        Log.d("BluetoothButtonService", message)
+        Log.d("Bespoke", message)
         val timestamp = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()).format(Date())
         val line = "[$timestamp] $message"
         val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)

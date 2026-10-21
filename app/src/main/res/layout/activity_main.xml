@@ -33,18 +33,32 @@
         android:text="@string/xposed_status_waiting"
         android:textStyle="bold" />
 
-    <Button
-        android:id="@+id/btn_enable_accessibility"
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/enable_accessibility" />
+        android:text="@string/device_label" />
 
-    <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/switch_key_capture"
+    <Spinner
+        android:id="@+id/spinner_device"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:spinnerMode="dropdown" />
+
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="@string/capture_phone_keys" />
+        android:text="@string/profile_name_label" />
+
+    <EditText
+        android:id="@+id/profile_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/profile_name_label"
+        android:imeOptions="actionDone"
+        android:importantForAutofill="no"
+        android:inputType="textCapWords"
+        android:singleLine="true" />
 
     <com.google.android.material.switchmaterial.SwitchMaterial
         android:id="@+id/switch_pass_to_android"
@@ -118,10 +132,23 @@
         android:min="0"
         android:progress="10" />
 
-    <LinearLayout
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/switch_show_log"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
+        android:text="@string/show_event_log" />
+
+    <LinearLayout
+        android:id="@+id/event_log_panel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
@@ -145,6 +172,7 @@
         android:layout_height="wrap_content"
         android:fontFamily="monospace" />
 
+    </LinearLayout>
 </LinearLayout>
 </ScrollView>
 </LinearLayout>
