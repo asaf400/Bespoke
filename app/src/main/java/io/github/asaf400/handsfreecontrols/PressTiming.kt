@@ -6,10 +6,10 @@ object PressTiming {
     const val DEFAULT_WINDOW_MS = 500
     const val DEFAULT_DEBOUNCE_MS = 250
     const val MIN_WINDOW_MS = 100
-    const val MAX_WINDOW_MS = 1500
+    const val MAX_WINDOW_MS = 8000
     const val MIN_DEBOUNCE_MS = 0
     const val MAX_DEBOUNCE_MS = 800
-    const val STEP_MS = 5
+    const val STEP_MS = 25
 
     private const val PREFERENCES = "press_timing"
     private const val WINDOW = "window_ms"

@@ -25,6 +25,7 @@ import androidx.appcompat.app.AppCompatActivity
 class MainActivity : AppCompatActivity() {
 
     private lateinit var tvLog: TextView
+    private lateinit var xposedStatus: TextView
     private val logReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val message = intent?.getStringExtra(BluetoothButtonService.EXTRA_LOG_MESSAGE)
@@ -41,6 +42,8 @@ class MainActivity : AppCompatActivity() {
 
         tvLog = findViewById(R.id.tv_event_log)
         tvLog.text = BluetoothButtonService.getStoredLog(this)
+        xposedStatus = findViewById(R.id.xposed_status)
+        showHookStatus()
         val btnEnable = findViewById<Button>(R.id.btn_enable_accessibility)
 
         val keyCaptureSwitch = findViewById<SwitchMaterial>(R.id.switch_key_capture)
@@ -95,13 +98,22 @@ class MainActivity : AppCompatActivity() {
         }
 
         val filter = IntentFilter(BluetoothButtonService.ACTION_LOG_EVENT)
+        val statusFilter = IntentFilter(HookStatus.ACTION_UPDATED)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(logReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            registerReceiver(statusReceiver, statusFilter, Context.RECEIVER_NOT_EXPORTED)
         } else {
             registerReceiver(logReceiver, filter)
+            registerReceiver(statusReceiver, statusFilter)
         }
 
         logAccessibilityServiceState()
+        AssistantRelay.publish(this)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        showHookStatus()
     }
 
     private fun applySystemBarPadding() {
@@ -221,6 +233,22 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(logReceiver)
+        unregisterReceiver(statusReceiver)
+    }
+
+    private val statusReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            showHookStatus()
+        }
+    }
+
+    private fun showHookStatus() {
+        val seen = HookStatus.seenAt(this) > 0L
+        xposedStatus.text = when {
+            !seen -> getString(R.string.xposed_status_waiting)
+            HookStatus.prefsReadable(this) -> getString(R.string.xposed_status_active)
+            else -> getString(R.string.xposed_status_unreadable)
+        }
     }
 
     private fun appendLog(message: String) {

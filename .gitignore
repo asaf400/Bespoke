@@ -13,3 +13,13 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Kotlin cache
+.kotlin/
+# Android Studio device-specific files
+.idea/deploymentTargetDropDown.xml
+.idea/deploymentTargetSelector.xml
+# Signing secrets
+*.jks
+*.keystore
+keystore.properties

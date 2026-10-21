@@ -3,6 +3,9 @@
     <string name="accessibility_service_label">Hands Free Controls</string>
     <string name="accessibility_service_description">Intercepts Bluetooth hands-free button clicks to control media.</string>
     <string name="enable_accessibility">Enable Accessibility Service</string>
+    <string name="xposed_status_waiting">Vector hook: not detected</string>
+    <string name="xposed_status_active">Vector hook: active, preferences readable</string>
+    <string name="xposed_status_unreadable">Vector hook: active, preferences not readable</string>
     <string name="capture_phone_keys">Also log phone buttons</string>
     <string name="pass_to_android">Pass press to Android assistant</string>
     <string name="mapping_single">Single press</string>

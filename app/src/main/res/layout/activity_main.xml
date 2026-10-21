@@ -25,6 +25,14 @@
     android:orientation="vertical"
     android:padding="16dp">
 
+    <TextView
+        android:id="@+id/xposed_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="12dp"
+        android:text="@string/xposed_status_waiting"
+        android:textStyle="bold" />
+
     <Button
         android:id="@+id/btn_enable_accessibility"
         android:layout_width="match_parent"
@@ -91,9 +99,9 @@
         android:id="@+id/seek_press_window"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:max="280"
+        android:max="316"
         android:min="0"
-        android:progress="80" />
+        android:progress="16" />
 
     <TextView
         android:id="@+id/label_debounce"
@@ -106,9 +114,9 @@
         android:id="@+id/seek_debounce"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:max="160"
+        android:max="32"
         android:min="0"
-        android:progress="50" />
+        android:progress="10" />
 
     <LinearLayout
         android:layout_width="match_parent"

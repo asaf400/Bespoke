@@ -22,6 +22,9 @@
             android:name="xposedminversion"
             android:value="93" />
         <meta-data
+            android:name="xposedsharedprefs"
+            android:value="true" />
+        <meta-data
             android:name="xposedscope"
             android:resource="@array/xposed_scope" />
 
@@ -51,6 +54,14 @@
         <receiver
             android:name=".CarButtonReceiver"
             android:exported="true" />
+
+        <receiver
+            android:name=".HookStatusReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="io.github.asaf400.handsfreecontrols.HOOK_STATUS" />
+            </intent-filter>
+        </receiver>
 
     </application>
 
