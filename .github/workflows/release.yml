@@ -6,6 +6,7 @@ on:
       - "v*"
 
 permissions:
+  actions: write
   contents: write
 
 jobs:
@@ -19,6 +20,11 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v6.4.0
+        with:
+          cache-provider: basic
+          cache-read-only: false
 
       - name: Decode keystore
         env:
