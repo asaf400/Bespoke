@@ -26,6 +26,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var deviceSpinner: Spinner
     private lateinit var profileName: EditText
     private lateinit var deviceAdapter: ArrayAdapter<String>
+    private lateinit var playbackSpinner: Spinner
+    private var playbackTargets: List<PlaybackApps.Target?> = listOf(null)
     private lateinit var passSwitch: SwitchMaterial
     private lateinit var showLogSwitch: SwitchMaterial
     private var bindingProfile = false
@@ -123,6 +125,7 @@ class MainActivity : AppCompatActivity() {
             PressTiming.MAX_DEBOUNCE_MS,
             DeviceProfiles::setDebounceMs
         )
+        setupPlaybackSpinner()
 
         showLogSwitch = findViewById(R.id.switch_show_log)
         val showLog = getSharedPreferences(UI_PREFERENCES, MODE_PRIVATE).getBoolean(SHOW_LOG, false)
@@ -192,9 +195,10 @@ class MainActivity : AppCompatActivity() {
         selectAction(R.id.spinner_single, profile.single)
         selectAction(R.id.spinner_double, profile.doublePress)
         selectAction(R.id.spinner_triple, profile.triple)
+        selectPlayback(profile.playerId)
         showTiming(R.id.seek_press_window, R.id.label_press_window, R.string.press_window_label, PressTiming.MIN_WINDOW_MS, profile.windowMs)
         showTiming(R.id.seek_debounce, R.id.label_debounce, R.string.debounce_label, PressTiming.MIN_DEBOUNCE_MS, profile.debounceMs)
-        bindingProfile = false
+        playbackSpinner.post { bindingProfile = false }
     }
 
     private fun commitProfileName(address: String) {
@@ -213,6 +217,40 @@ class MainActivity : AppCompatActivity() {
         deviceAdapter.addAll(DeviceProfiles.profiles(this).map { it.name })
         if (position >= 0) deviceSpinner.setSelection(position)
         bindingProfile = false
+    }
+
+    private fun setupPlaybackSpinner() {
+        playbackSpinner = findViewById(R.id.spinner_playback_app)
+        playbackTargets = listOf(null) + PlaybackApps.targets(this)
+        val labels = playbackTargets.map { target ->
+            target?.label ?: getString(R.string.playback_app_none)
+        }
+        playbackSpinner.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_item,
+            labels
+        ).also { adapter ->
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+        playbackSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: android.widget.AdapterView<*>?,
+                view: View?,
+                position: Int,
+                id: Long
+            ) {
+                if (bindingProfile) return
+                val address = selectedAddress ?: return
+                DeviceProfiles.setPlayer(this@MainActivity, address, playbackTargets[position]?.id.orEmpty())
+            }
+
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+        }
+    }
+
+    private fun selectPlayback(playerId: String) {
+        val index = playbackTargets.indexOfFirst { it?.id == playerId }.coerceAtLeast(0)
+        playbackSpinner.setSelection(index)
     }
 
     private fun selectAction(spinnerId: Int, keyCode: Int) {

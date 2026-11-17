@@ -29,6 +29,7 @@ object DeviceProfiles {
         val windowMs: Int,
         val debounceMs: Int,
         val passToAndroid: Boolean,
+        val playerId: String,
     )
 
     fun profiles(context: Context): List<Profile> {
@@ -81,6 +82,10 @@ object DeviceProfiles {
     fun setPassToAndroid(context: Context, address: String, pass: Boolean) {
         preferences(context).edit().putBoolean(passKey(address), pass).commit()
         publish(context, address)
+    }
+
+    fun setPlayer(context: Context, address: String, playerId: String) {
+        preferences(context).edit().putString(playerKey(normalize(address)), playerId).commit()
     }
 
     fun publishAll(context: Context) {
@@ -188,6 +193,7 @@ object DeviceProfiles {
             windowMs = values.windowMs,
             debounceMs = values.debounceMs,
             passToAndroid = values.passToAndroid,
+            playerId = prefs.getString(playerKey(normalized), "").orEmpty(),
         )
     }
 
@@ -234,6 +240,8 @@ object DeviceProfiles {
     private fun windowKey(address: String) = "window.$address"
 
     private fun debounceKey(address: String) = "debounce.$address"
+
+    private fun playerKey(address: String) = "player.$address"
 
     @Suppress("DEPRECATION")
     private fun preferences(context: Context): SharedPreferences {

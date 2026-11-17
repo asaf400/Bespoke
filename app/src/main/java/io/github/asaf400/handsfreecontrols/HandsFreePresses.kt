@@ -49,8 +49,19 @@ object HandsFreePresses {
             return
         }
         val action = MediaActions.find(keyCode)
-        EventLog.append(context, "$source $pressName press -> ${context.getString(action.labelRes)}")
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val player = PlaybackApps.fromId(DeviceProfiles.profile(context, address).playerId)
+        val startsPlayback = keyCode == KeyEvent.KEYCODE_MEDIA_PLAY ||
+            keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
+        if (player != null && startsPlayback && !PlaybackApps.isPlaybackActive(context)) {
+            EventLog.append(
+                context,
+                "$source $pressName press -> ${context.getString(action.labelRes)} in ${player.packageName}"
+            )
+            PlaybackApps.play(context, player)
+            return
+        }
+        EventLog.append(context, "$source $pressName press -> ${context.getString(action.labelRes)}")
         dispatchMediaKey(audioManager, keyCode)
     }
 
