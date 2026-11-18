@@ -1,5 +1,6 @@
 package io.github.asaf400.handsfreecontrols
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -7,6 +8,9 @@ import android.media.AudioManager
 import android.media.browse.MediaBrowser
 import android.media.session.MediaController
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.view.KeyEvent
 
 object PlaybackApps {
@@ -21,7 +25,9 @@ object PlaybackApps {
         val id: String = "${kind.name}|$packageName|$className"
     }
 
+    private val handler = Handler(Looper.getMainLooper())
     private var browser: MediaBrowser? = null
+    private var generation = 0
 
     fun targets(context: Context): List<Target> {
         val manager = context.packageManager
@@ -65,36 +71,120 @@ object PlaybackApps {
         return audio.isMusicActive
     }
 
+    /**
+     * Starts playback in [target]. A cold music app ignores a single media key sent right after it is
+     * launched, so this sends the play command, checks whether audio actually started, and keeps
+     * retrying (launching the app first if needed) for a few seconds.
+     */
     fun play(context: Context, target: Target) {
         val application = context.applicationContext
+        val attempt = ++generation
+        handler.removeCallbacksAndMessages(null)
+        if (target.kind == Kind.BROWSER) connectAndPlay(application, target)
+        sendDirect(application, target)
+        handler.postDelayed({ verify(application, target, attempt, 1) }, RETRY_MS)
+    }
+
+    private fun verify(context: Context, target: Target, attempt: Int, step: Int) {
+        if (attempt != generation) return
+        if (isPlaybackActive(context)) {
+            EventLog.append(context, "Playback started in ${target.packageName}")
+            return
+        }
+        if (step > MAX_STEPS) {
+            EventLog.append(context, "Gave up starting playback in ${target.packageName}")
+            return
+        }
+        if (step == 1) {
+            launch(context, target)
+        } else {
+            sendSystemKey(context)
+            sendDirect(context, target)
+        }
+        handler.postDelayed({ verify(context, target, attempt, step + 1) }, RETRY_MS)
+    }
+
+    private fun connectAndPlay(context: Context, target: Target) {
         try {
-            if (target.kind != Kind.BROWSER) {
-                sendPlay(application, target)
-                return
-            }
             browser?.disconnect()
-            val component = android.content.ComponentName(target.packageName, target.className)
+            val component = ComponentName(target.packageName, target.className)
             val connection = object : MediaBrowser.ConnectionCallback() {
                 override fun onConnected() {
                     val connected = browser ?: return
-                    val controller = MediaController(application, connected.sessionToken)
-                    controller.transportControls.play()
-                    EventLog.append(application, "Started playback in ${target.packageName}")
-                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                        connected.disconnect()
-                    }, 1500)
+                    try {
+                        val controller = MediaController(context, connected.sessionToken)
+                        controller.transportControls.play()
+                        EventLog.append(context, "Sent play through ${target.packageName} media session")
+                    } catch (error: Exception) {
+                        EventLog.append(context, "Media session play failed for ${target.packageName}: ${error.message}")
+                    }
+                    handler.postDelayed({ connected.disconnect() }, 3000)
                 }
 
                 override fun onConnectionFailed() {
-                    EventLog.append(application, "Could not attach to ${target.packageName}; sending its play command")
-                    sendPlay(application, target)
+                    EventLog.append(context, "${target.packageName} refused the media browser connection")
                 }
             }
-            browser = MediaBrowser(application, component, connection, Bundle()).also { it.connect() }
+            browser = MediaBrowser(context, component, connection, Bundle()).also { it.connect() }
         } catch (error: Exception) {
-            EventLog.append(application, "Could not start ${target.packageName}: ${error.message}")
-            sendPlay(application, target)
+            EventLog.append(context, "Could not connect to ${target.packageName}: ${error.message}")
         }
+    }
+
+    /** Sends a play key straight to every media button receiver or service the app declares. */
+    private fun sendDirect(context: Context, target: Target) {
+        val manager = context.packageManager
+        val query = Intent(Intent.ACTION_MEDIA_BUTTON).setPackage(target.packageName)
+        val components = mutableListOf<Pair<ComponentName, Boolean>>()
+        runCatching {
+            manager.queryBroadcastReceivers(query, PackageManager.MATCH_ALL).forEach { resolve ->
+                resolve.activityInfo?.let { components += ComponentName(it.packageName, it.name) to false }
+            }
+        }
+        runCatching {
+            manager.queryIntentServices(query, PackageManager.MATCH_ALL).forEach { resolve ->
+                resolve.serviceInfo?.let { components += ComponentName(it.packageName, it.name) to true }
+            }
+        }
+        if (components.isEmpty()) {
+            components += ComponentName(target.packageName, target.className) to (target.kind == Kind.SERVICE)
+        }
+        for ((component, isService) in components) {
+            for (action in intArrayOf(KeyEvent.ACTION_DOWN, KeyEvent.ACTION_UP)) {
+                try {
+                    val intent = Intent(Intent.ACTION_MEDIA_BUTTON)
+                        .setComponent(component)
+                        .putExtra(Intent.EXTRA_KEY_EVENT, playKey(action))
+                    if (isService) context.startService(intent) else context.sendBroadcast(intent)
+                } catch (error: Exception) {
+                    EventLog.append(context, "Play key to ${component.flattenToShortString()} failed: ${error.message}")
+                }
+            }
+        }
+        EventLog.append(context, "Sent play key to ${target.packageName}")
+    }
+
+    private fun sendSystemKey(context: Context) {
+        val audio = context.getSystemService(AudioManager::class.java) ?: return
+        audio.dispatchMediaKeyEvent(playKey(KeyEvent.ACTION_DOWN))
+        audio.dispatchMediaKeyEvent(playKey(KeyEvent.ACTION_UP))
+        EventLog.append(context, "Sent play key to the active media session")
+    }
+
+    private fun launch(context: Context, target: Target) {
+        try {
+            val intent = context.packageManager.getLaunchIntentForPackage(target.packageName)
+                ?: Intent(Intent.ACTION_MAIN).setComponent(ComponentName(target.packageName, target.className))
+            context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            EventLog.append(context, "Opened ${target.packageName} to start playback")
+        } catch (error: Exception) {
+            EventLog.append(context, "Could not open ${target.packageName}: ${error.message}")
+        }
+    }
+
+    private fun playKey(action: Int): KeyEvent {
+        val now = SystemClock.uptimeMillis()
+        return KeyEvent(now, now, action, KeyEvent.KEYCODE_MEDIA_PLAY, 0)
     }
 
     private fun addComponents(
@@ -123,66 +213,13 @@ object PlaybackApps {
         }
     }
 
-    private fun sendPlay(context: Context, target: Target) {
-        val down = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY)
-        val up = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY)
-        val component = android.content.ComponentName(target.packageName, target.className)
-        try {
-            if (target.kind == Kind.SERVICE) {
-                deliver(context, component, down, service = true)
-                deliver(context, component, up, service = true)
-                EventLog.append(context, "Sent play to ${target.packageName}")
-                return
-            }
-            if (target.kind == Kind.BUTTON) {
-                deliver(context, component, down, service = false)
-                deliver(context, component, up, service = false)
-                EventLog.append(context, "Sent play to ${target.packageName}")
-                return
-            }
-        } catch (error: Exception) {
-            EventLog.append(context, "Direct play failed for ${target.packageName}: ${error.message}")
-        }
-        openAndPressPlay(context, target)
-    }
-
-    private fun deliver(context: Context, component: android.content.ComponentName, event: KeyEvent, service: Boolean) {
-        val intent = Intent(Intent.ACTION_MEDIA_BUTTON)
-            .setComponent(component)
-            .putExtra(Intent.EXTRA_KEY_EVENT, event)
-        if (service) context.startService(intent) else context.sendBroadcast(intent)
-    }
-
-    private fun openAndPressPlay(context: Context, target: Target) {
-        try {
-            val launch = context.packageManager.getLaunchIntentForPackage(target.packageName)
-            if (launch != null) {
-                launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(launch)
-            }
-            val down = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY)
-            val up = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY)
-            context.sendBroadcast(
-                Intent(Intent.ACTION_MEDIA_BUTTON)
-                    .setPackage(target.packageName)
-                    .putExtra(Intent.EXTRA_KEY_EVENT, down)
-            )
-            context.sendBroadcast(
-                Intent(Intent.ACTION_MEDIA_BUTTON)
-                    .setPackage(target.packageName)
-                    .putExtra(Intent.EXTRA_KEY_EVENT, up)
-            )
-            EventLog.append(context, "Opened ${target.packageName} and sent play")
-        } catch (error: Exception) {
-            EventLog.append(context, "Could not open ${target.packageName}: ${error.message}")
-        }
-    }
-
     private fun appLabel(manager: PackageManager, packageName: String, fallback: String): String {
         val application = runCatching { manager.getApplicationLabel(manager.getApplicationInfo(packageName, 0)).toString() }.getOrNull()
         return application?.takeIf { it.isNotBlank() } ?: fallback.ifBlank { packageName }
     }
 
+    private const val RETRY_MS = 1500L
+    private const val MAX_STEPS = 5
     private const val MEDIA_BROWSER_SERVICE = "android.media.browse.MediaBrowserService"
     private val SKIPPED_PACKAGES = setOf(
         "com.android.bluetooth",
